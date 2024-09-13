@@ -111,7 +111,7 @@ def post_login_form():
         flash('Colis ajouté avec succès !', 'success')
         return redirect(url_for('list_parcels'))
 
-    return render_template('templates/form.html')
+    return render_template('form.html')
 
 # Route pour afficher tous les articles
 @app.route('/list')
@@ -168,27 +168,4 @@ def delete_parcel(id):
     cursor.close()
     conn.close()
 
-    flash('Colis supprimé avec succès !', 'success')
-    return redirect(url_for('list_parcels'))
-
-# Route pour signaler un article perdu
-@app.route('/report_lost', methods=['GET', 'POST'])
-@login_required
-def report_lost():
-    if request.method == 'POST':
-        reference = request.form['reference']
-        description = request.form['description']
-
-        msg = Message('Article Perdu Signalé', sender='your_email@example.com', recipients=['admin@example.com'])
-        msg.body = f'Article perdu:\nRéférence: {reference}\nDescription: {description}'
-        mail.send(msg)
-
-        flash('Article perdu signalé avec succès.', 'success')
-        return redirect(url_for('report_lost'))
-
-    return render_template('report_lost.html')
-
-# Initialiser la base de données au démarrage de l'application
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
+    flash('Colis supprimé avec succès !')
