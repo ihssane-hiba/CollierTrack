@@ -3,7 +3,7 @@ import mysql.connector
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-hashed_password = generate_password_hash(password)
+
 
 
 app = Flask(__name__)
@@ -74,16 +74,11 @@ def login_required(f):
     return decorated_function
 
 # Route pour la page de connexion
-
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        
-        # Débogage: Afficher le nom d'utilisateur et le mot de passe soumis
-        print(f"Nom d'utilisateur: {username}")
-        print(f"Mot de passe (non haché): {password}")
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -91,21 +86,14 @@ def login():
         user = cursor.fetchone()
         cursor.close()
         conn.close()
-        
-        # Débogage: Vérifier si l'utilisateur est trouvé dans la base de données
-        print(f"Utilisateur trouvé: {user}")
-        
-        if user:
-            # Débogage: Comparer le mot de passe haché
-            print(f"Mot de passe haché stocké: {user['password']}")
-            print(f"Comparaison du mot de passe: {check_password_hash(user['password'], password)}")
-            
+
         if user and check_password_hash(user['password'], password):
             session['logged_in'] = True
             session['username'] = user['username']
             session['role'] = user['role']
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('form'))  # Redirection vers la page du formulaire
+            return redirect(url_for('form'))
+
         else:
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
 
