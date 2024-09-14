@@ -25,7 +25,7 @@
                 <td>{{ parcel.status }}</td>
                 <td>{{ parcel.date_enregistrement }}</td>
                 <td>
-                    <a href="{{ url_for('edit_parcel', id=parcel.id) }}">Edit</a>
+                    <a href="file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/edit_parcel.html">Edit</a>
                     <form action="{{ url_for('delete_parcel', id=parcel.id) }}" method="post" style="display:inline;">
                         <button type="submit">Delete</button>
                     </form>
@@ -34,7 +34,11 @@
             {% endfor %}
         </tbody>
     </table>
-    <a href="{{ url_for('form') }}">Add New Parcel</a>
-    <a href="{{ url_for('report_lost') }}">Report Lost Item</a>
+
+    <!-- Lien pour ajouter un nouveau colis -->
+    <a href="file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/form.html" >Add New Parcel</a>
+
+    <!-- Lien pour signaler un article perdu -->
+    <a href="file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/report_lost.html">Report Lost Item</a>
 </body>
 </html>
