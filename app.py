@@ -20,7 +20,7 @@ def get_db_connection():
             print("Connexion réussie à la base de données.")
             return conn
     except mysql.connector.Error as err:
-        print(f"Erreur de connexion à la base de données: {err}")
+        flash(f"Erreur de connexion à la base de données: {err}", 'danger')
         return None
 
 # Initialiser la base de données et créer les tables
@@ -58,80 +58,18 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
-# Décorateur pour vérifier la connexion de l'utilisateur
+# Décorateur pour vérifier si l'utilisateur est connecté
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
             flash('Vous devez être connecté pour accéder à cette page.', 'warning')
-            return redirect(url_for('login'))
+            return redirect(url_for('index'))  # Redirection vers la page d'accueil
         return f(*args, **kwargs)
     return decorated_function
 
-# Route pour la page index
-@app.route('/')
-@login_required
-def index():
-    return render_template('index.html')
-
-# Route pour la page de connexion
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-            user = cursor.fetchone()
-            cursor.close()
-            conn.close()
-            
-            if user and check_password_hash(user['password'], password):
-                session['logged_in'] = True
-                session['username'] = user['username']
-                session['role'] = user['role']
-                flash('Connexion réussie !', 'success')
-                return redirect(url_for('form'))  # Rediriger vers la page form.html
-            else:
-                flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
-
-    return render_template('login.html')
-
-# Route pour l'inscription
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        hashed_password = generate_password_hash(password)
-
-        conn = get_db_connection()
-        if conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO users (username, password, role)
-                VALUES (%s, %s, %s)
-            ''', (username, hashed_password, 'user'))
-            conn.commit()
-            cursor.close()
-            conn.close()
-
-            flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
-            return redirect(url_for('login'))
-
-    return render_template('register.html')
-
-# Route pour afficher le formulaire après connexion
-@app.route('/form')
-@login_required
-def form():
-    return render_template('form.html')
-
-# Route pour afficher tous les articles
-@app.route('/list')
+# Route pour afficher la liste des colis
+@app.route('/list_parcels.html')
 @login_required
 def list_parcels():
     try:
@@ -142,11 +80,10 @@ def list_parcels():
             parcels = cursor.fetchall()
             cursor.close()
             conn.close()
-
-            return render_template('list_parcels.html', parcels=parcels)
+            return render_template('parcels.html', parcels=parcels)
     except mysql.connector.Error as err:
-        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
-        return redirect(url_for('form'))
+        flash(f'Erreur de connexion à la base de données : {err}', 'danger')
+        return redirect(url_for('index'))
 
 # Route pour modifier un article
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
@@ -181,8 +118,8 @@ def edit_parcel(id):
 
             return render_template('edit_parcel.html', parcel=parcel)
     except mysql.connector.Error as err:
-        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
-        return redirect(url_for('form'))
+        flash(f'Erreur de connexion à la base de données : {err}', 'danger')
+        return redirect(url_for('index'))
 
 # Route pour supprimer un article
 @app.route('/delete/<int:id>', methods=['POST'])
@@ -197,11 +134,16 @@ def delete_parcel(id):
             cursor.close()
             conn.close()
 
-            flash('Colis supprimé avec succès !')
+            flash('Colis supprimé avec succès !', 'success')
             return redirect(url_for('list_parcels'))
     except mysql.connector.Error as err:
-        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
-        return redirect(url_for('form'))
+        flash(f'Erreur de connexion à la base de données : {err}', 'danger')
+        return redirect(url_for('index'))
+
+# Route vers la page d'accueil
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     init_db()  # Assurez-vous que la base de données est initialisée
