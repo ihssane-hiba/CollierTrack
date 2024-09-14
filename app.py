@@ -83,16 +83,16 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('post_login_form'))
+            return redirect(('file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/form.html'))  # Redirect to the '/form' route
         else:
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
 
     return render_template('login.html')
 
 # Route pour afficher le formulaire après connexion
-@app.route('/post_login_form', methods=['GET', 'POST'])
+@app.route('/form', methods=['GET', 'POST'])
 @login_required
-def post_login_form():
+def form():
     if request.method == 'POST':
         reference = request.form['reference']
         description = request.form['description']
@@ -169,3 +169,7 @@ def delete_parcel(id):
     conn.close()
 
     flash('Colis supprimé avec succès !')
+    return redirect(url_for('list_parcels'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
