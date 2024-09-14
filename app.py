@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import mysql.connector
 from flask_mail import Mail, Message
-from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete'
@@ -16,7 +16,9 @@ def get_db_connection():
             user="root",
             password=""
         )
-        return conn
+        if conn.is_connected():
+            print("Connexion réussie à la base de données.")
+            return conn
     except mysql.connector.Error as err:
         print(f"Erreur de connexion à la base de données: {err}")
         return None
@@ -24,30 +26,28 @@ def get_db_connection():
 # Initialiser la base de données et créer les tables
 def init_db():
     conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            username VARCHAR(50) UNIQUE,
-            password VARCHAR(255),
-            role VARCHAR(20)
-        )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS parcels (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            reference VARCHAR(50) UNIQUE,
-            description VARCHAR(255),
-            status VARCHAR(20),
-            date_enregistrement DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-
-    conn.commit()
-    cursor.close()
-    conn.close()
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                username VARCHAR(50) UNIQUE,
+                password VARCHAR(255),
+                role VARCHAR(20)
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS parcels (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                reference VARCHAR(50) UNIQUE,
+                description VARCHAR(255),
+                status VARCHAR(20),
+                date_enregistrement DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
 
 # Configuration de l'email
 app.config['MAIL_SERVER'] = 'smtp.example.com'
@@ -68,28 +68,35 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Route pour la page index
+@app.route('/')
+@login_required
+def index():
+    return render_template('index.html')
+
 # Route pour la page de connexion
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if user and check_password_hash(user['password'], password):
-            session['logged_in'] = True
-            session['username'] = user['username']
-            session['role'] = user['role']
-            flash('Connexion réussie !', 'success')
-            return redirect(url_for('form'))
-        else:
-            flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            user = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if user and check_password_hash(user['password'], password):
+                session['logged_in'] = True
+                session['username'] = user['username']
+                session['role'] = user['role']
+                flash('Connexion réussie !', 'success')
+                return redirect(url_for('form'))  # Rediriger vers la page form.html
+            else:
+                flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
 
     return render_template('login.html')
 
@@ -102,101 +109,100 @@ def register():
         hashed_password = generate_password_hash(password)
 
         conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (username, password, role)
-            VALUES (%s, %s, %s)
-        ''', (username, hashed_password, 'user'))  # Exemple de rôle par défaut
-        conn.commit()
-        cursor.close()
-        conn.close()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO users (username, password, role)
+                VALUES (%s, %s, %s)
+            ''', (username, hashed_password, 'user'))
+            conn.commit()
+            cursor.close()
+            conn.close()
 
-        flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
-        return redirect(url_for('login'))
+            flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
+            return redirect(url_for('login'))
 
     return render_template('register.html')
 
 # Route pour afficher le formulaire après connexion
-@app.route('/form', methods=['GET', 'POST'])
+@app.route('/form')
 @login_required
 def form():
-    if request.method == 'POST':
-        reference = request.form['reference']
-        description = request.form['description']
-        status = request.form['status']
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO parcels (reference, description, status)
-            VALUES (%s, %s, %s)
-        ''', (reference, description, status))
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        flash('Colis ajouté avec succès !', 'success')
-        return redirect(url_for('list_parcels'))
-
     return render_template('form.html')
 
 # Route pour afficher tous les articles
 @app.route('/list')
 @login_required
 def list_parcels():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM parcels")
-    parcels = cursor.fetchall()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM parcels")
+            parcels = cursor.fetchall()
+            cursor.close()
+            conn.close()
 
-    return render_template('list_parcels.html', parcels=parcels)
+            return render_template('list_parcels.html', parcels=parcels)
+    except mysql.connector.Error as err:
+        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
+        return redirect(url_for('form'))
 
 # Route pour modifier un article
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_parcel(id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
 
-    if request.method == 'POST':
-        reference = request.form['reference']
-        description = request.form['description']
-        status = request.form['status']
+            if request.method == 'POST':
+                reference = request.form['reference']
+                description = request.form['description']
+                status = request.form['status']
 
-        cursor.execute('''
-            UPDATE parcels
-            SET reference = %s, description = %s, status = %s
-            WHERE id = %s
-        ''', (reference, description, status, id))
-        conn.commit()
-        cursor.close()
-        conn.close()
+                cursor.execute('''
+                    UPDATE parcels
+                    SET reference = %s, description = %s, status = %s
+                    WHERE id = %s
+                ''', (reference, description, status, id))
+                conn.commit()
+                cursor.close()
+                conn.close()
 
-        flash('Colis modifié avec succès !', 'success')
-        return redirect(url_for('list_parcels'))
+                flash('Colis modifié avec succès !', 'success')
+                return redirect(url_for('list_parcels'))
 
-    cursor.execute("SELECT * FROM parcels WHERE id = %s", (id,))
-    parcel = cursor.fetchone()
-    cursor.close()
-    conn.close()
+            cursor.execute("SELECT * FROM parcels WHERE id = %s", (id,))
+            parcel = cursor.fetchone()
+            cursor.close()
+            conn.close()
 
-    return render_template('edit_parcel.html', parcel=parcel)
+            return render_template('edit_parcel.html', parcel=parcel)
+    except mysql.connector.Error as err:
+        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
+        return redirect(url_for('form'))
 
 # Route pour supprimer un article
 @app.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_parcel(id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM parcels WHERE id = %s", (id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM parcels WHERE id = %s", (id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
 
-    flash('Colis supprimé avec succès !')
-    return redirect(url_for('list_parcels'))
+            flash('Colis supprimé avec succès !')
+            return redirect(url_for('list_parcels'))
+    except mysql.connector.Error as err:
+        flash('Erreur de connexion à la base de données : ' + str(err), 'danger')
+        return redirect(url_for('form'))
 
 if __name__ == '__main__':
+    init_db()  # Assurez-vous que la base de données est initialisée
     app.run(debug=True)
