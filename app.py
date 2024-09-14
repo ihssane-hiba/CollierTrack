@@ -3,15 +3,11 @@ import mysql.connector
 from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-hashed_password = generate_password_hash(password)
-
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete'
 
 # Configuration de la connexion à MySQL
-
-
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
@@ -24,7 +20,6 @@ def get_db_connection():
     except mysql.connector.Error as err:
         print(f"Erreur de connexion à la base de données: {err}")
         return None
-
 
 # Initialiser la base de données et créer les tables
 def init_db():
@@ -74,17 +69,12 @@ def login_required(f):
     return decorated_function
 
 # Route pour la page de connexion
-
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         
-        # Débogage: Afficher le nom d'utilisateur et le mot de passe soumis
-        print(f"Nom d'utilisateur: {username}")
-        print(f"Mot de passe (non haché): {password}")
-
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
@@ -92,24 +82,39 @@ def login():
         cursor.close()
         conn.close()
         
-        # Débogage: Vérifier si l'utilisateur est trouvé dans la base de données
-        print(f"Utilisateur trouvé: {user}")
-        
-        if user:
-            # Débogage: Comparer le mot de passe haché
-            print(f"Mot de passe haché stocké: {user['password']}")
-            print(f"Comparaison du mot de passe: {check_password_hash(user['password'], password)}")
-            
         if user and check_password_hash(user['password'], password):
             session['logged_in'] = True
             session['username'] = user['username']
             session['role'] = user['role']
             flash('Connexion réussie !', 'success')
-            return redirect(url_for('form'))  # Redirection vers la page du formulaire
+            return redirect(url_for('form'))
         else:
             flash('Nom d\'utilisateur ou mot de passe incorrect.', 'danger')
 
     return render_template('login.html')
+
+# Route pour l'inscription
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, password, role)
+            VALUES (%s, %s, %s)
+        ''', (username, hashed_password, 'user'))  # Exemple de rôle par défaut
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        flash('Inscription réussie ! Vous pouvez maintenant vous connecter.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
 
 # Route pour afficher le formulaire après connexion
 @app.route('/form', methods=['GET', 'POST'])
