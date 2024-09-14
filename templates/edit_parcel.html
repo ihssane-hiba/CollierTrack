@@ -4,21 +4,166 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Parcel</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 20px;
+            position: relative;
+            background-color: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -1px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding-left: 30px;
+            color: #00bfff;
+        }
+
+        .title::before,
+        .title::after {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            left: 0px;
+            background-color: #00bfff;
+        }
+
+        .title::after {
+            width: 18px;
+            height: 18px;
+            animation: pulse 1s linear infinite;
+        }
+
+        .message {
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form label {
+            position: relative;
+        }
+
+        .form label .input {
+            background-color: #333;
+            color: #fff;
+            width: 100%;
+            padding: 10px;
+            outline: 0;
+            border: 1px solid rgba(105, 105, 105, 0.397);
+            border-radius: 10px;
+        }
+
+        .form label .input + span {
+            color: rgba(255, 255, 255, 0.5);
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            font-size: 0.9em;
+            cursor: text;
+            transition: 0.3s ease;
+        }
+
+        .form label .input:placeholder-shown + span {
+            top: 12.5px;
+            font-size: 0.9em;
+        }
+
+        .form label .input:focus + span,
+        .form label .input:valid + span {
+            color: #00bfff;
+            top: 0px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        .submit {
+            border: none;
+            outline: none;
+            padding: 10px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            background-color: #00bfff;
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out;
+        }
+
+        .submit:hover {
+            background-color: #00bfff96;
+        }
+
+        @keyframes pulse {
+            from {
+                transform: scale(0.9);
+                opacity: 1;
+            }
+            to {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 10px;
+            color: #00bfff;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <h1>Edit Parcel</h1>
-    <form action="{{ url_for('edit_parcel', id=parcel.id) }}" method="post">
-        <label for="reference">Reference:</label>
-        <input type="text" id="reference" name="reference" value="{{ parcel.reference }}" required>
-        <br>
-        <label for="description">Description:</label>
-        <textarea id="description" name="description" required>{{ parcel.description }}</textarea>
-        <br>
-        <label for="status">Status:</label>
-        <input type="text" id="status" name="status" value="{{ parcel.status }}" required>
-        <br>
-        <button type="submit">Update Parcel</button>
+    <form class="form" action="{{ url_for('edit_parcel', id=parcel.id) }}" method="post">
+        <p class="title">Edit Parcel</p>
+        <p class="message">Update the parcel details below.</p>
+
+        <!-- Champ pour la référence du colis -->
+        <label>
+            <input class="input" type="text" id="reference" name="reference" value="Reference" required>
+            <span>Reference</span>
+        </label>
+
+        <!-- Champ pour la description du colis -->
+        <label>
+            <input class="input" type="text" id="description" name="description" value="Description" required>
+            <span>Description</span>
+        </label>
+
+        <!-- Champ pour le statut du colis -->
+        <label>
+            <input class="input" type="text" id="status" name="status" value="Status" required>
+            <span>Status</span>
+        </label>
+
+        <button type="submit" class="submit">Update Parcel</button>
+        <a href="file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/list_parcels.html" class="back-link">Back to List</a>
     </form>
-    <a href="file:///C:/xampp/htdocs/dashboard/CollierTrack/templates/list_parcels.html">Back to List</a>
 </body>
 </html>
